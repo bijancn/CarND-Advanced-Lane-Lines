@@ -9,6 +9,7 @@ import pickle
 
 
 draw = False
+pickle_file_name = "camera_cal/calibration_pickle.p"
 
 
 # Step through the list and search for chessboard corners
@@ -50,8 +51,7 @@ def save_calibration_result(mtx, dist):
   dist_pickle = {}
   dist_pickle["mtx"] = mtx
   dist_pickle["dist"] = dist
-  pickle.dump( dist_pickle, open( "camera_cal/calibration_pickle.p", "wb" ) )
-
+  pickle.dump( dist_pickle, open( pickle_file_name, "wb" ) )
 
 def visualize_undistortion(img, mtx, dist):
   dst = cv2.undistort(img, mtx, dist, None, mtx)
