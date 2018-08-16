@@ -10,3 +10,14 @@ for the fit
 But maybe look at it after transforming back first
 
 *Correction*: I had to make the destination rectangle simply bigger!
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+I reduced the margin of the windows to 15 to filter out more of the
+noise coming from shadows.
+
+I can clearly see that the assumptions for the perspective transform are
+not fully working. As the car goes over humps, the lines go from an
+opening angle to parallel to a closing angle.
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+Increased again to 30 as other parts of the movie got jumpy with 15

@@ -95,25 +95,14 @@ def null_out_edges(image):
 
 def pipeline(image, fname='foo', lines=[]):
   images = [image]
-  #  start_time = time.time()
   image = undistort(image)
-  #  print("a--- %s seconds ---" % (time.time() - start_time))
-  #  start_time = time.time()
   images.append(image)
   image = perspective_transform(image, fname)
-  #  print("b--- %s seconds ---" % (time.time() - start_time))
-  #  start_time = time.time()
   images.append(image)
   image = threshold(image)
-  #  print("c--- %s seconds ---" % (time.time() - start_time))
-  #  start_time = time.time()
   image = null_out_edges(image)
-  #  print("d--- %s seconds ---" % (time.time() - start_time))
-  #  start_time = time.time()
   images.append(image)
   image, lines = fit_and_draw_on_undistorted(image, images[1], fname, lines)
-  #  print("e--- %s seconds ---" % (time.time() - start_time))
-  #  start_time = time.time()
 
   if (draw_overview):
     images = map(convert_if_possible, images)
@@ -124,7 +113,6 @@ def pipeline(image, fname='foo', lines=[]):
 
   cv2.imshow('img', image)
   cv2.waitKey(1)
-  #  print("f--- %s seconds ---" % (time.time() - start_time))
   return image, lines
 
 
@@ -136,9 +124,12 @@ def convert_if_possible(img):
 
 
 lines = [Line(), Line()]
+nr = 0
 def pipeline_with_line(image):
   global lines
-  image, lines = pipeline(image, lines=lines)
+  global nr
+  image, lines = pipeline(image, fname='video_' + str(nr), lines=lines)
+  nr += 1
   return image
 
 
@@ -149,7 +140,7 @@ def main():
       image = cv2.imread(fname)
       image, _ = pipeline(image, fname=fname)
   else:
-    clip1 = VideoFileClip("project_video.mp4").subclip(21,23)
+    clip1 = VideoFileClip("project_video.mp4") # .subclip(21,23)
     clip = clip1.fl_image(pipeline_with_line)
     clip.write_videofile("project_video_out.mp4", audio=False)
 
