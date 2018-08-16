@@ -4,19 +4,22 @@
 import numpy as np
 import cv2
 import glob
+import time
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import pickle
 import perspective
+from line import Line
+from moviepy.editor import VideoFileClip
 from sliding_window import *
 
 ################################################################################
 #                              STEERING VARIABLES                              #
 ################################################################################
 pickle_file_name = "camera_cal/calibration_pickle.p"
-draw_perspective_transform = True
-draw_overview = True
-
+draw_perspective_transform = False
+draw_overview = False
+test_on_test_images = False
 
 ################################################################################
 #                              TUNABLE PARAMETERS                              #
@@ -75,8 +78,6 @@ def sobel(image):
 
 def threshold(image):
   combined_mask = cv2.bitwise_or(sobel(image), color_mask(image))
-  #  res = cv2.bitwise_and(image, image, mask=combined_mask)
-  combined_mask = combined_mask / 255.0
   combined_mask[np.nonzero(combined_mask)] = 1
   return combined_mask
 
@@ -89,21 +90,30 @@ def null_out_edges(image):
   relevant = image[top:bot, left:right]
   new = np.zeros_like(image)
   new[top:bot,left:right] = relevant
-  assert(new.shape == image.shape)
   return new
 
 
-def pipeline(image, fname):
+def pipeline(image, fname='foo', lines=[]):
   images = [image]
+  #  start_time = time.time()
   image = undistort(image)
+  #  print("a--- %s seconds ---" % (time.time() - start_time))
+  #  start_time = time.time()
   images.append(image)
   image = perspective_transform(image, fname)
+  #  print("b--- %s seconds ---" % (time.time() - start_time))
+  #  start_time = time.time()
   images.append(image)
   image = threshold(image)
+  #  print("c--- %s seconds ---" % (time.time() - start_time))
+  #  start_time = time.time()
   image = null_out_edges(image)
+  #  print("d--- %s seconds ---" % (time.time() - start_time))
+  #  start_time = time.time()
   images.append(image)
-  image = fit_polynomial(image, images[0], fname)
-  #  inverse_perspective_transform_and_plot()
+  image, lines = fit_and_draw_on_undistorted(image, images[1], fname, lines)
+  #  print("e--- %s seconds ---" % (time.time() - start_time))
+  #  start_time = time.time()
 
   if (draw_overview):
     images = map(convert_if_possible, images)
@@ -112,7 +122,10 @@ def pipeline(image, fname):
     [a.imshow(i) for a, i in zip(axes.flatten(), images)]
     plt.savefig('processing/' + fname + '.png')
 
-  return image
+  cv2.imshow('img', image)
+  cv2.waitKey(1)
+  #  print("f--- %s seconds ---" % (time.time() - start_time))
+  return image, lines
 
 
 def convert_if_possible(img):
@@ -121,13 +134,23 @@ def convert_if_possible(img):
   except:
     return img
 
+
+lines = [Line(), Line()]
+def pipeline_with_line(image):
+  global lines
+  image, lines = pipeline(image, lines=lines)
+  return image
+
+
 def main():
-  images = glob.glob('test_images/*.jpg')
-  for fname in images:
-    image = cv2.imread(fname)
-    cv2.imshow('img', image)
-    image = pipeline(image, fname)
-    cv2.imshow('img', image)
-    cv2.waitKey(2000)
+  if (test_on_test_images):
+    images = glob.glob('test_images/*.jpg')
+    for fname in images:
+      image = cv2.imread(fname)
+      image, _ = pipeline(image, fname=fname)
+  else:
+    clip1 = VideoFileClip("project_video.mp4").subclip(21,23)
+    clip = clip1.fl_image(pipeline_with_line)
+    clip.write_videofile("project_video_out.mp4", audio=False)
 
 main()
