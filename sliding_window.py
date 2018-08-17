@@ -95,16 +95,17 @@ def find_lane_pixels(image, fname, lines):
     return lines, ax
 
 
-def draw_on_undistored(left_fitx, right_fitx, ploty, image, undist, fname,
-                       lines):
-  newwarp = invert_perspective_trafo(left_fitx, right_fitx, ploty, image)
+def draw_on_undistored(ploty, image, undist, fname, lines):
+  newwarp = invert_perspective_trafo(ploty, lines, image)
   undist = cv2.cvtColor(undist, cv2.COLOR_BGR2RGB)
   result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
   draw_text_info(result, lines)
   return result
 
 
-def invert_perspective_trafo(left_fitx, right_fitx, ploty, image):
+def invert_perspective_trafo(ploty, lines, image):
+  left_fitx, right_fitx = construct_from_coeffs(lines[0].current_fit,
+                                                lines[1].current_fit, ploty)
   warp_zero = np.zeros_like(image).astype(np.uint8)
   color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
   pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
@@ -149,9 +150,14 @@ def measure_radius_and_center(lines, ploty, left_fitx, right_fitx):
 
 
 def construct_fit(lines, image):
-  left_fit_coeff = np.polyfit(lines[0].ally, lines[0].allx, 2)
-  right_fit_coeff = np.polyfit(lines[1].ally, lines[1].allx, 2)
+  lines[0].current_fit = np.polyfit(lines[0].ally, lines[0].allx, 2)
+  lines[1].current_fit = np.polyfit(lines[1].ally, lines[1].allx, 2)
   ploty = np.linspace(0, image.shape[0] - 1, image.shape[0])
+  left_fitx, right_fitx = construct_from_coeffs(lines[0].current_fit, lines[1].current_fit, ploty)
+  return ploty, left_fitx, right_fitx, lines
+
+
+def construct_from_coeffs(left_fit_coeff, right_fit_coeff, ploty):
   try:
     left_fitx = left_fit_coeff[0]*ploty**2 + left_fit_coeff[1]*ploty + left_fit_coeff[2]
     right_fitx = right_fit_coeff[0]*ploty**2 + right_fit_coeff[1]*ploty + right_fit_coeff[2]
@@ -159,37 +165,54 @@ def construct_fit(lines, image):
     print('The function failed to fit a line!')
     left_fitx = 1*ploty**2 + 1*ploty
     right_fitx = 1*ploty**2 + 1*ploty
-  lines[0].current_fit = left_fit_coeff
-  lines[1].current_fit = right_fit_coeff
-  return ploty, left_fitx, right_fitx, lines
+  return left_fitx, right_fitx
 
+
+allowed_difference = 0.50
+allowed_nr_of_unsane = 5
 
 def sanity_check(lines):
-  return True
+  if lines[0].best_fit is not None and lines[0].nr_of_unsane < allowed_nr_of_unsane:
+    diff_left = abs(lines[0].current_fit - lines[0].best_fit) / abs(lines[0].best_fit)
+    diff_right = abs(lines[1].current_fit - lines[1].best_fit) / abs(lines[1].best_fit)
+    distance_off_center = (lines[1].line_base_pos - lines[0].line_base_pos) / 2
+    sane = (diff_left < allowed_difference).all() and \
+           (diff_right < allowed_difference).all() \
+           and distance_off_center < 2
+  else:
+    sane = True         # there is nothing to fall back to for the first frame
+  return sane
 
 
 def reset_to_last_frame(lines):
-  pass
+  lines[0].current_fit = lines[0].best_fit
+  lines[1].current_fit = lines[1].best_fit
+  return lines
 
 
-def check_and_reset_if_necessary(lines):
+def check_and_reset_if_necessary(lines, ploty, left_fitx, right_fitx):
   if not sanity_check(lines):
     lines = reset_to_last_frame(lines)
-    lines[0].self_detected = False
-    lines[1].self_detected = False
+    lines[0].nr_of_unsane += 1
   else:
-    lines[0].self_detected = True
-    lines[1].self_detected = True
+    lines[0].nr_of_unsane = 0
+    if lines[0].best_fit is not None:
+      lines[0].best_fit = (lines[0].current_fit + lines[0].best_fit) / 2
+    else:
+      lines[0].best_fit = lines[0].current_fit
+    if lines[1].best_fit is not None:
+      lines[1].best_fit = (lines[1].current_fit + lines[1].best_fit) / 2
+    else:
+      lines[1].best_fit = lines[1].current_fit
+    lines = measure_radius_and_center(lines, ploty, left_fitx, right_fitx)
   return lines
 
 
 def fit_and_draw_on_undistorted(image, undist, fname, lines):
   lines, ax = find_lane_pixels(image, fname, lines)
   ploty, left_fitx, right_fitx, lines = construct_fit(lines, image)
-  lines = measure_radius_and_center(lines, ploty, left_fitx, right_fitx)
-  lines = check_and_reset_if_necessary(lines)
-  result = draw_on_undistored(left_fitx, right_fitx, ploty, image, undist, fname,
-                              lines)
+  lines = check_and_reset_if_necessary(lines, ploty, left_fitx, right_fitx)
+  result = draw_on_undistored(ploty, image, undist, fname, lines)
   if (draw_sliding):
     ax[0].imshow(image)
     ax[0].plot(left_fitx, ploty, color=left_color)

@@ -9,19 +9,11 @@ class Line():
         self.allx = None
         #y values for detected line pixels
         self.ally = None
-        # was the line detected in the last iteration?
-        self.detected = False
         #polynomial coefficients for the most recent fit
         self.current_fit = [np.array([False])]
         #distance in meters of vehicle center from the line
         self.line_base_pos = None
-
-        # x values of the last n fits of the line
-        self.recent_xfitted = []
         #polynomial coefficients averaged over the last n iterations
         self.best_fit = None
-
-        #average x values of the fitted line over the last n iterations
-        self.bestx = None
-        #difference in fit coefficients between last and new fits
-        self.diffs = np.array([0,0,0], dtype='float')
+        #number of unsane fits in a row
+        self.nr_of_unsane = 0

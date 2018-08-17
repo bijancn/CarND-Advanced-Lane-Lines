@@ -113,7 +113,7 @@ def pipeline(image, fname='foo', lines=[]):
 
   cv2.imshow('img', image)
   cv2.waitKey(1)
-  return image, lines
+  return cv2.cvtColor(image, cv2.COLOR_BGR2RGB), lines
 
 
 def convert_if_possible(img):
@@ -140,7 +140,7 @@ def main():
       image = cv2.imread(fname)
       image, _ = pipeline(image, fname=fname)
   else:
-    clip1 = VideoFileClip("project_video.mp4") # .subclip(21,23)
+    clip1 = VideoFileClip("project_video.mp4")
     clip = clip1.fl_image(pipeline_with_line)
     clip.write_videofile("project_video_out.mp4", audio=False)
 
