@@ -46,7 +46,7 @@ def draw_sliding_rectangles(win_xleft_low, win_y_low, window_height, ax):
   ax[0].add_patch(rect)
 
 
-def find_lane_pixels(image, fname):
+def find_lane_pixels(image, fname, lines):
     histogram = np.sum(image[image.shape[0]//2:,:], axis=0)
     midpoint = np.int(histogram.shape[0]//2)
     leftx_base = np.argmax(histogram[:midpoint])
@@ -88,19 +88,19 @@ def find_lane_pixels(image, fname):
             rightx_current = np.int(np.mean(nonzerox[good_right_inds]))
     left_lane_inds = np.concatenate(left_lane_inds)
     right_lane_inds = np.concatenate(right_lane_inds)
-    leftx = nonzerox[left_lane_inds]
-    lefty = nonzeroy[left_lane_inds]
-    rightx = nonzerox[right_lane_inds]
-    righty = nonzeroy[right_lane_inds]
-    return leftx, lefty, rightx, righty, ax
+    lines[0].allx = nonzerox[left_lane_inds]
+    lines[0].ally = nonzeroy[left_lane_inds]
+    lines[1].allx = nonzerox[right_lane_inds]
+    lines[1].ally = nonzeroy[right_lane_inds]
+    return lines, ax
 
 
 def draw_on_undistored(left_fitx, right_fitx, ploty, image, undist, fname,
-                       distance_off_center, left_rad, right_rad):
+                       lines):
   newwarp = invert_perspective_trafo(left_fitx, right_fitx, ploty, image)
   undist = cv2.cvtColor(undist, cv2.COLOR_BGR2RGB)
   result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
-  draw_text_info(result, left_rad, right_rad, distance_off_center)
+  draw_text_info(result, lines)
   return result
 
 
@@ -115,15 +115,18 @@ def invert_perspective_trafo(left_fitx, right_fitx, ploty, image):
                                 (image.shape[1], image.shape[0]))
 
 
-def draw_text_info(result, left_rad, right_rad, distance_off_center):
-  radius = (left_rad+right_rad) / 2
+def draw_text_info(result, lines):
+  radius = (lines[0].radius_of_curvature + lines[1].radius_of_curvature) / 2
   if radius < 3000:
     radius_text = "Radius: {:6.2f} m".format(radius)
   else:
     radius_text = "Radius: straight"
+  distance_off_center = (lines[1].line_base_pos - lines[0].line_base_pos) / 2
   center_text = "Distance off-center: {:6.2f} m".format(distance_off_center)
-  cv2.putText(result, center_text, (100, 50), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (256, 256, 256))
-  cv2.putText(result, radius_text, (100, 100), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (256, 256, 256))
+  cv2.putText(result, center_text, (100, 50), cv2.FONT_HERSHEY_COMPLEX_SMALL,
+              1, (256, 256, 256))
+  cv2.putText(result, radius_text, (100, 100), cv2.FONT_HERSHEY_COMPLEX_SMALL,
+              1, (256, 256, 256))
 
 
 def measure_curvature(y_eval, left_fit_coeff, right_fit_coeff):
@@ -134,13 +137,21 @@ def measure_curvature(y_eval, left_fit_coeff, right_fit_coeff):
   return left_curverad, right_curverad
 
 
-def fit_and_draw_on_undistorted(image, undist, fname, lines):
-  leftx, lefty, rightx, righty, ax = find_lane_pixels(image, fname)
+def measure_radius_and_center(lines, ploty, left_fitx, right_fitx):
+  left_fit_coeff_m = np.polyfit(lines[0].ally * ym_per_pix, lines[0].allx * xm_per_pix, 2)
+  right_coeff_m = np.polyfit(lines[1].ally * ym_per_pix, lines[1].allx * xm_per_pix, 2)
+  y_eval = np.max(ploty) * ym_per_pix
+  lines[0].radius_of_curvature, lines[1].radius_of_curvature = \
+    measure_curvature(y_eval, left_fit_coeff_m, right_coeff_m)
+  lines[0].line_base_pos = (car_center - left_fitx[np.max(ploty)]) * xm_per_pix
+  lines[1].line_base_pos = (right_fitx[np.max(ploty)] - car_center) * xm_per_pix
+  return lines
 
-  left_fit_coeff, left_residuals, _, _, _ = np.polyfit(lefty, leftx, 2, full=True)
-  right_fit_coeff, right_residuals, _, _, _ = np.polyfit(righty, rightx, 2, full=True)
 
-  ploty = np.linspace(0, image.shape[0]-1, image.shape[0])
+def construct_fit(lines, image):
+  left_fit_coeff = np.polyfit(lines[0].ally, lines[0].allx, 2)
+  right_fit_coeff = np.polyfit(lines[1].ally, lines[1].allx, 2)
+  ploty = np.linspace(0, image.shape[0] - 1, image.shape[0])
   try:
     left_fitx = left_fit_coeff[0]*ploty**2 + left_fit_coeff[1]*ploty + left_fit_coeff[2]
     right_fitx = right_fit_coeff[0]*ploty**2 + right_fit_coeff[1]*ploty + right_fit_coeff[2]
@@ -148,17 +159,37 @@ def fit_and_draw_on_undistorted(image, undist, fname, lines):
     print('The function failed to fit a line!')
     left_fitx = 1*ploty**2 + 1*ploty
     right_fitx = 1*ploty**2 + 1*ploty
+  lines[0].current_fit = left_fit_coeff
+  lines[1].current_fit = right_fit_coeff
+  return ploty, left_fitx, right_fitx, lines
 
-  left_fit_coeff_m = np.polyfit(lefty*ym_per_pix, leftx*xm_per_pix, 2)
-  right_coeff_m = np.polyfit(righty*ym_per_pix, rightx*xm_per_pix, 2)
-  y_eval = np.max(ploty) * ym_per_pix
-  left_rad, right_rad = measure_curvature(y_eval, left_fit_coeff_m, right_coeff_m)
-  line_center = (left_fitx[np.max(ploty)] + right_fitx[np.max(ploty)]) / 2
-  distance_off_center = (car_center - line_center) * xm_per_pix
 
+def sanity_check(lines):
+  return True
+
+
+def reset_to_last_frame(lines):
+  pass
+
+
+def check_and_reset_if_necessary(lines):
+  if not sanity_check(lines):
+    lines = reset_to_last_frame(lines)
+    lines[0].self_detected = False
+    lines[1].self_detected = False
+  else:
+    lines[0].self_detected = True
+    lines[1].self_detected = True
+  return lines
+
+
+def fit_and_draw_on_undistorted(image, undist, fname, lines):
+  lines, ax = find_lane_pixels(image, fname, lines)
+  ploty, left_fitx, right_fitx, lines = construct_fit(lines, image)
+  lines = measure_radius_and_center(lines, ploty, left_fitx, right_fitx)
+  lines = check_and_reset_if_necessary(lines)
   result = draw_on_undistored(left_fitx, right_fitx, ploty, image, undist, fname,
-                       distance_off_center, left_rad, right_rad)
-
+                              lines)
   if (draw_sliding):
     ax[0].imshow(image)
     ax[0].plot(left_fitx, ploty, color=left_color)
@@ -171,5 +202,3 @@ def fit_and_draw_on_undistorted(image, undist, fname, lines):
     plt.imshow(result)
     plt.savefig('result/' + fname + '.png')
   return result, lines
-
-
