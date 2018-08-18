@@ -32,16 +32,13 @@ def getMinv():
 
 
 def draw(image, top_down, fname):
-  def set_ax(ax, image, title, points):
+  def set_ax(ax, image, points):
     ax.imshow(image)
-    ax.set_title(title, fontsize=30)
     for point in points:
-      ax.plot(point[0], point[1], '.', color="red", markersize=20)
-    ax.add_collection(PatchCollection([Polygon(points)], color="red", alpha=0.3))
-  image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-  top_down = cv2.cvtColor(top_down, cv2.COLOR_BGR2RGB)
-  f, (ax1, ax2) = plt.subplots(1, 2, figsize=(24, 9))
+      ax.plot(point[0], point[1], '.', color="yellow", markersize=20)
+    ax.add_collection(PatchCollection([Polygon(points)], color="yellow", alpha=0.3))
+  f, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 18))
   f.tight_layout()
-  set_ax(ax1, image, 'Original Image', perspective_source_points)
-  set_ax(ax2, top_down, 'Undistorted and Warped Image', perspective_destination_points)
+  set_ax(ax1, image, perspective_source_points)
+  set_ax(ax2, top_down, perspective_destination_points)
   plt.savefig('warped/' + fname + '.png')

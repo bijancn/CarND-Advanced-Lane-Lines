@@ -21,3 +21,8 @@ opening angle to parallel to a closing angle.
 
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Increased again to 30 as other parts of the movie got jumpy with 15
+
+bcn 2018-08-17
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+I had to introduce a counter for the number of unsane pictures to
+prevent deadlocks.

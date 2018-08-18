@@ -1,35 +1,40 @@
 # Starting point is the lecture
-# Extra inspiration from https://towardsdatascience.com/robust-lane-finding-using-advanced-computer-vision-techniques-mid-project-update-540387e95ed3
+# Some additional inspiration is from https://towardsdatascience.com/robust-lane-finding-using-advanced-computer-vision-techniques-mid-project-update-540387e95ed3
 
-import numpy as np
 import cv2
 import glob
 import time
+import pickle
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-import pickle
-import perspective
-from line import Line
 from moviepy.editor import VideoFileClip
-from sliding_window import *
+
+import perspective
+import sliding_window
+from line import Line
 
 ################################################################################
 #                              STEERING VARIABLES                              #
 ################################################################################
+test_on_test_images = True
+
 pickle_file_name = "camera_cal/calibration_pickle.p"
-draw_perspective_transform = False
-draw_overview = False
-test_on_test_images = False
+
+draw_distortion = False
+draw_threshold = False
+draw_perspective_transform = True
+draw_overview = True
 
 ################################################################################
 #                              TUNABLE PARAMETERS                              #
 ################################################################################
 # white-yellow selection
-# TODO: too strict?
 yellow_hsv_low  = np.array([0, 80, 200])
 yellow_hsv_high = np.array([40, 255, 255])
-white_hsv_low  = np.array([  20,   0,   200])
-white_hsv_high = np.array([ 255,  80, 255])
+sensitivity = 30
+white_hsv_low  = np.array([  0,   0, 255 - sensitivity])
+white_hsv_high = np.array([ 255,  sensitivity, 255])
 
 # Sobel
 sobel_threshold = (20, 100)
@@ -37,13 +42,13 @@ sobel_threshold = (20, 100)
 # cutting
 cut_at_top = 0
 cut_at_bottom = 40
-cut_left = 350
-cut_right = 250
+cut_left = 300
+cut_right = 300
 
 ################################################################################
 
+calibration = pickle.load( open( pickle_file_name, "rb" ) )
 def undistort(image):
-  calibration = pickle.load( open( pickle_file_name, "rb" ) )
   mtx = calibration["mtx"]
   dist = calibration["dist"]
   return cv2.undistort(image, mtx, dist, None, mtx)
@@ -97,23 +102,36 @@ def pipeline(image, fname='foo', lines=[]):
   images = [image]
   image = undistort(image)
   images.append(image)
-  image = perspective_transform(image, fname)
-  images.append(image)
   image = threshold(image)
+  images.append(image)
+  image = perspective_transform(image, fname)
   image = null_out_edges(image)
   images.append(image)
-  image, lines = fit_and_draw_on_undistorted(image, images[1], fname, lines)
+  image, lines = sliding_window.fit_and_draw_on_undistorted(image,
+                                images[1], fname, lines)
 
+  image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+  #  images = map(convert_if_possible, images)
+  if (draw_distortion):
+    draw(images[0:2], 'distortion/' + fname)
+  if (draw_threshold):
+    draw(images[1:3], 'threshold/' + fname)
   if (draw_overview):
-    images = map(convert_if_possible, images)
-    f, axes = plt.subplots(2, 2, figsize=(24, 9))
-    f.tight_layout()
-    [a.imshow(i) for a, i in zip(axes.flatten(), images)]
-    plt.savefig('processing/' + fname + '.png')
+    draw(images, 'processing/' + fname)
 
   cv2.imshow('img', image)
   cv2.waitKey(1)
-  return cv2.cvtColor(image, cv2.COLOR_BGR2RGB), lines
+  return image, lines
+
+
+def draw(images, suffix):
+  if len(images) == 2:
+    f_axes = plt.subplots(2, 1, figsize=(16, 18))
+  else:
+    f_axes = plt.subplots(2, 2, figsize=(16, 9))
+  f_axes[0].tight_layout()
+  [a.imshow(i) for a, i in zip(f_axes[1].flatten(), images)]
+  plt.savefig(suffix + '.png')
 
 
 def convert_if_possible(img):
@@ -138,7 +156,7 @@ def main():
     images = glob.glob('test_images/*.jpg')
     for fname in images:
       image = cv2.imread(fname)
-      image, _ = pipeline(image, fname=fname)
+      image, _ = pipeline(image, fname=fname, lines=[Line(), Line()])
   else:
     clip1 = VideoFileClip("project_video.mp4")
     clip = clip1.fl_image(pipeline_with_line)

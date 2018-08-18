@@ -1,6 +1,15 @@
 ## Advanced Lane Finding
 [![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
+Run `python calibration.py` to calibrate the camera on the chessboard
+pictures.
+
+The main pipeline can be run with `python pipeline.py` on either test
+images or the whole video.
+
+Please refer to the steering variables at the top of both files to
+steer the behavior of the scripts.
+
 The Project
 ---
 

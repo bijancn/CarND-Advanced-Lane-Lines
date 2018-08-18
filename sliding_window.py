@@ -5,7 +5,7 @@ import perspective
 from matplotlib.patches import Rectangle
 import cv2
 
-draw_histo = False
+draw_histo = True
 draw_sliding = False
 draw_result = False
 ################################################################################
@@ -29,7 +29,8 @@ right_color = 'green'
 
 
 def draw_histogram(image, histogram, fname):
-    f, axes = plt.subplots(2, 1, figsize=(24, 9))
+    f, axes = plt.subplots(2, 1, figsize=(16, 18))
+    f.tight_layout()
     axes[0].imshow(image)
     axes[1].plot(histogram)
     plt.savefig('histo/' + fname + '.png')
@@ -62,7 +63,7 @@ def find_lane_pixels(image, fname, lines):
     left_lane_inds = []
     right_lane_inds = []
     if (draw_sliding):
-      f, ax = plt.subplots(2, 1, figsize=(9, 9))
+      f, ax = plt.subplots(2, 1, figsize=(16, 18))
     else:
       ax = None
     for window in range(nwindows):
