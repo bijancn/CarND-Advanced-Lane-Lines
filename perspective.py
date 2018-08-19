@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 
-# perspective transform
 perspective_source_points = np.float32([
   [595,450],
   [689,450],

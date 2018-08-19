@@ -6,8 +6,8 @@ from matplotlib.patches import Rectangle
 import cv2
 
 draw_histo = True
-draw_sliding = False
-draw_result = False
+draw_sliding = True
+draw_result = True
 ################################################################################
 #                              TUNABLE PARAMETERS                              #
 ################################################################################
@@ -36,15 +36,16 @@ def draw_histogram(image, histogram, fname):
     plt.savefig('histo/' + fname + '.png')
 
 
-def draw_sliding_rectangles(win_xleft_low, win_y_low, window_height, ax):
+def draw_sliding_rectangles(win_xleft_low, win_y_low, window_height, ax,
+                            win_xright_low):
   rect = Rectangle((win_xleft_low, win_y_low),
                            2 * margin, window_height,
                            linewidth=1, edgecolor=left_color, facecolor='none')
-  ax[0].add_patch(rect)
+  ax.add_patch(rect)
   rect = Rectangle((win_xright_low,win_y_low),
                            2 * margin, window_height,
                            linewidth=1, edgecolor=right_color, facecolor='none')
-  ax[0].add_patch(rect)
+  ax.add_patch(rect)
 
 
 def find_lane_pixels(image, fname, lines):
@@ -63,7 +64,8 @@ def find_lane_pixels(image, fname, lines):
     left_lane_inds = []
     right_lane_inds = []
     if (draw_sliding):
-      f, ax = plt.subplots(2, 1, figsize=(16, 18))
+      f, ax = plt.subplots(1, 1, figsize=(16, 9))
+      f.tight_layout()
     else:
       ax = None
     for window in range(nwindows):
@@ -74,7 +76,7 @@ def find_lane_pixels(image, fname, lines):
         win_xright_low = rightx_current - margin
         win_xright_high = rightx_current + margin
         if (draw_sliding):
-          draw_sliding_rectangles(win_xleft_low, win_y_low, window_height, ax)
+          draw_sliding_rectangles(win_xleft_low, win_y_low, window_height, ax, win_xright_low)
         good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) &
                           (nonzerox >= win_xleft_low) & (nonzerox < win_xleft_high)
                           ).nonzero()[0]
@@ -96,7 +98,7 @@ def find_lane_pixels(image, fname, lines):
     return lines, ax
 
 
-def draw_on_undistored(ploty, image, undist, fname, lines):
+def draw_on_undistorted(ploty, image, undist, fname, lines):
   newwarp = invert_perspective_trafo(ploty, lines, image)
   undist = cv2.cvtColor(undist, cv2.COLOR_BGR2RGB)
   result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
@@ -191,7 +193,7 @@ def reset_to_last_frame(lines):
   return lines
 
 
-def check_and_reset_if_necessary(lines, ploty, left_fitx, right_fitx):
+def check_reset_and_measure(lines, ploty, left_fitx, right_fitx):
   if not sanity_check(lines):
     lines = reset_to_last_frame(lines)
     lines[0].nr_of_unsane += 1
@@ -212,14 +214,12 @@ def check_and_reset_if_necessary(lines, ploty, left_fitx, right_fitx):
 def fit_and_draw_on_undistorted(image, undist, fname, lines):
   lines, ax = find_lane_pixels(image, fname, lines)
   ploty, left_fitx, right_fitx, lines = construct_fit(lines, image)
-  lines = check_and_reset_if_necessary(lines, ploty, left_fitx, right_fitx)
-  result = draw_on_undistored(ploty, image, undist, fname, lines)
+  lines = check_reset_and_measure(lines, ploty, left_fitx, right_fitx)
+  result = draw_on_undistorted(ploty, image, undist, fname, lines)
   if (draw_sliding):
-    ax[0].imshow(image)
-    ax[0].plot(left_fitx, ploty, color=left_color)
-    ax[0].plot(right_fitx, ploty, color=right_color)
-    result_for_plt = cv2.cvtColor(result, cv2.COLOR_RGB2BGR)
-    ax[1].imshow(result_for_plt)
+    ax.imshow(image)
+    ax.plot(left_fitx, ploty, color=left_color)
+    ax.plot(right_fitx, ploty, color=right_color)
     plt.savefig('sliding/' + fname + '.png')
   if (draw_result):
     f, ax = plt.subplots(1, 1, figsize=(16, 9))

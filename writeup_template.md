@@ -1,4 +1,4 @@
-# Advanced Lane Finding Project
+# Advanced lane finding project
 
 The goals / steps of this project are the following:
 
@@ -23,8 +23,9 @@ The goals / steps of this project are the following:
 [image4a]: ./warped/test_images/straight_lines1.jpg.png "Warp Example"
 [image4b]: ./warped/test_images/test3.jpg.png "Warp Example"
 [image5]: ./histo/test_images/test4.jpg.png "Histogram Example"
-[image5]: ./examples/color_fit_lines.jpg "Fit Visual"
-[image6]: ./examples/example_output.jpg "Output"
+[image6]: ./sliding/test_images/test1.jpg.png "Windows Example"
+[image7]: ./result/test_images/test2.jpg.png "Result Example"
+[image8]: ./result/test_images/test3.jpg.png "Result Example"
 [video1]: ./project_video.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
@@ -35,7 +36,7 @@ This write up contains the main discussion. Instructions on how to run
 the code are in the [README](README.md) and some random thoughts during
 developments in the [lab journal](lab_jounral.md).
 
-### Camera Calibration: camera matrix and distortion coefficients
+### Camera calibration: camera matrix and distortion coefficients
 
 The calibration can be found in `calibration.py`.
 
@@ -140,17 +141,44 @@ test images nicely even in the presence of other potential lines:
 
 ![alt text][image5]
 
-
-
-#### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
-
-I did this in lines # through # in my code in `my_other_file.py`
-
-#### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
-
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+Next, we step through the image and collect the pixels that belong to
+the lane, i.e. the sliding window with a width of 100 pixels here,
+recentering the window when at least 50 new pixels have been found.
 
 ![alt text][image6]
+
+All of the pixels that are contained in one of the nine windows are
+considered for the polynomial fit and saved to the `allx` and `ally`
+properties of the left and right `lines`, which is the output of
+`find_lane_pixels`. The fit is performed in `construct_fit` with
+`np.polyfit` to a 2nd degree polynomial.
+
+#### Radius of curvature of the lane the position of the vehicle
+
+The radius and lane position is computed in `measure_radius_and_center`.
+This is simply done by using the radius formulae provided in the lecture
+with the following factors to roughly convert pixels into meters
+```
+ym_per_pix = 30/720
+xm_per_pix = 3.7/700
+```
+For the distance off-center, I simply compared the middle of the screen
+(1280/2) with the center of the left and right line fit position at the
+bottom of the screen. While the precision of the conversion factors is
+questionable, it yields the right order of magnitude for both radius and
+distance for all test images:
+
+![alt text][image7]
+
+#### Transform back to undistorted image space
+
+To visualize the obtained lanes, I transform in the function
+`draw_on_undistorted` (and the `invert_perspective_trafo` therein) the
+obtained fit back to the original undistorted image space by applying
+the inverse perspective transform. This can be then drawn with
+`cv2.fillPoly` on top of the undistorted image.
+
+![alt text][image8]
 
 ---
 

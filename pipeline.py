@@ -21,8 +21,8 @@ test_on_test_images = True
 
 pickle_file_name = "camera_cal/calibration_pickle.p"
 
-draw_distortion = False
-draw_threshold = False
+draw_distortion = True
+draw_threshold = True
 draw_perspective_transform = True
 draw_overview = True
 
@@ -63,7 +63,7 @@ def perspective_transform(image, fname):
 
 
 def color_mask(image):
-  hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+  hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
   yellow_mask = cv2.inRange(hsv, yellow_hsv_low, yellow_hsv_high)
   white_mask = cv2.inRange(hsv, white_hsv_low, white_hsv_high)
   mask = cv2.bitwise_or(yellow_mask, white_mask)
@@ -110,6 +110,8 @@ def pipeline(image, fname='foo', lines=[]):
   image, lines = sliding_window.fit_and_draw_on_undistorted(image,
                                 images[1], fname, lines)
 
+  cv2.imshow('img', image)
+  cv2.waitKey(1)
   image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
   #  images = map(convert_if_possible, images)
   if (draw_distortion):
@@ -119,8 +121,6 @@ def pipeline(image, fname='foo', lines=[]):
   if (draw_overview):
     draw(images, 'processing/' + fname)
 
-  cv2.imshow('img', image)
-  cv2.waitKey(1)
   return image, lines
 
 
@@ -158,7 +158,7 @@ def main():
       image = cv2.imread(fname)
       image, _ = pipeline(image, fname=fname, lines=[Line(), Line()])
   else:
-    clip1 = VideoFileClip("project_video.mp4")
+    clip1 = VideoFileClip("project_video.mp4") #.subclip(22,22.5)
     clip = clip1.fl_image(pipeline_with_line)
     clip.write_videofile("project_video_out.mp4", audio=False)
 
