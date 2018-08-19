@@ -17,14 +17,14 @@ from line import Line
 ################################################################################
 #                              STEERING VARIABLES                              #
 ################################################################################
-test_on_test_images = True
+test_on_test_images = False
 
 pickle_file_name = "camera_cal/calibration_pickle.p"
 
-draw_distortion = True
-draw_threshold = True
-draw_perspective_transform = True
-draw_overview = True
+draw_distortion = False
+draw_threshold = False
+draw_perspective_transform = False
+draw_overview = False
 
 ################################################################################
 #                              TUNABLE PARAMETERS                              #
@@ -99,6 +99,8 @@ def null_out_edges(image):
 
 
 def pipeline(image, fname='foo', lines=[]):
+  if (test_on_test_images):
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
   images = [image]
   image = undistort(image)
   images.append(image)
@@ -112,8 +114,6 @@ def pipeline(image, fname='foo', lines=[]):
 
   cv2.imshow('img', image)
   cv2.waitKey(1)
-  image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-  #  images = map(convert_if_possible, images)
   if (draw_distortion):
     draw(images[0:2], 'distortion/' + fname)
   if (draw_threshold):
@@ -134,13 +134,6 @@ def draw(images, suffix):
   plt.savefig(suffix + '.png')
 
 
-def convert_if_possible(img):
-  try:
-    return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-  except:
-    return img
-
-
 lines = [Line(), Line()]
 nr = 0
 def pipeline_with_line(image):
@@ -158,7 +151,7 @@ def main():
       image = cv2.imread(fname)
       image, _ = pipeline(image, fname=fname, lines=[Line(), Line()])
   else:
-    clip1 = VideoFileClip("project_video.mp4") #.subclip(22,22.5)
+    clip1 = VideoFileClip("project_video.mp4") # .subclip(22,22.5)
     clip = clip1.fl_image(pipeline_with_line)
     clip.write_videofile("project_video_out.mp4", audio=False)
 

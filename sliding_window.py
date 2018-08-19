@@ -5,14 +5,14 @@ import perspective
 from matplotlib.patches import Rectangle
 import cv2
 
-draw_histo = True
-draw_sliding = True
-draw_result = True
+draw_histo = False
+draw_sliding = False
+draw_result = False
 ################################################################################
 #                              TUNABLE PARAMETERS                              #
 ################################################################################
 # Choose the number of sliding windows
-nwindows = 9
+nwindows = 12
 # Set the width of the windows +/- margin
 margin = 30
 # Set minimum number of pixels found to recenter window
@@ -100,7 +100,6 @@ def find_lane_pixels(image, fname, lines):
 
 def draw_on_undistorted(ploty, image, undist, fname, lines):
   newwarp = invert_perspective_trafo(ploty, lines, image)
-  undist = cv2.cvtColor(undist, cv2.COLOR_BGR2RGB)
   result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
   draw_text_info(result, lines)
   return result
@@ -201,12 +200,14 @@ def check_reset_and_measure(lines, ploty, left_fitx, right_fitx):
     lines[0].nr_of_unsane = 0
     if lines[0].best_fit is not None:
       lines[0].best_fit = (lines[0].current_fit + lines[0].best_fit) / 2
+      lines[0].current_fit = lines[0].best_fit
     else:
       lines[0].best_fit = lines[0].current_fit
     if lines[1].best_fit is not None:
       lines[1].best_fit = (lines[1].current_fit + lines[1].best_fit) / 2
     else:
       lines[1].best_fit = lines[1].current_fit
+      lines[1].current_fit = lines[1].best_fit
     lines = measure_radius_and_center(lines, ploty, left_fitx, right_fitx)
   return lines
 

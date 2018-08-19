@@ -34,7 +34,7 @@ The goals / steps of this project are the following:
 
 This write up contains the main discussion. Instructions on how to run
 the code are in the [README](README.md) and some random thoughts during
-developments in the [lab journal](lab_jounral.md).
+developments in the [lab journal](lab_journal.md).
 
 ### Camera calibration: camera matrix and distortion coefficients
 
@@ -142,12 +142,12 @@ test images nicely even in the presence of other potential lines:
 ![alt text][image5]
 
 Next, we step through the image and collect the pixels that belong to
-the lane, i.e. the sliding window with a width of 100 pixels here,
+the lane, i.e. the sliding window with a width of 60 pixels here,
 recentering the window when at least 50 new pixels have been found.
 
 ![alt text][image6]
 
-All of the pixels that are contained in one of the nine windows are
+All of the pixels that are contained in one of the 12 windows are
 considered for the polynomial fit and saved to the `allx` and `ally`
 properties of the left and right `lines`, which is the output of
 `find_lane_pixels`. The fit is performed in `construct_fit` with
@@ -162,6 +162,8 @@ with the following factors to roughly convert pixels into meters
 ym_per_pix = 30/720
 xm_per_pix = 3.7/700
 ```
+The final reported curve radius is simply the average of the left and
+right line and a radius above 3km is considered as straight.
 For the distance off-center, I simply compared the middle of the screen
 (1280/2) with the center of the left and right line fit position at the
 bottom of the screen. While the precision of the conversion factors is
@@ -184,18 +186,36 @@ the inverse perspective transform. This can be then drawn with
 
 ### Pipeline (video)
 
-#### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
+Here's a [link to my video result](./project_video_out.mp4).
 
-Here's a [link to my video result](./project_video.mp4)
+For the video, I implemented sanity checks and keep the last result in
+case the image doesn't seem sane. Hereby, I define a sane frame as
+having less then 50 % changes in all fit parameters and a distance off
+center of less than 2 meters. There is a counter attached and after 5
+unsane images, I reset to a new value in order to avoid a deadlock. I
+noticed that the unsane images especially occur when the car drives over
+a hump, so this method effectively keeps the prediction fixed until our
+assumptions are valid again.
+
+Furthermore, I do a simple average of the last best fit with the current
+fit to smooth out the changes from frame to frame.
 
 ---
 
 ### Discussion
 
-#### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
-
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
-
+While my pipeline works reasonably well on the project video it is still
+a bit wobbly and can fail in various other scenarios.
 
 I did not thoroughly fine tune the color and gradient threshold
-parameters, which can likekly be improved.
+parameters, which can likekly be improved. This shows especially in
+harder lighting conditions where the detection of wrong lines is too
+easy as I detected when trying out the challenge video. For this to work
+the thresholding definitely needs improvement.
+
+Furthermore, for sharper turns nulling out the right and left parts of
+the image would not be appropriate. Even worse, when the line would end
+not on the top side of the image anymore, the sliding window approach
+itself would fail to work. One possible improvement would be to select
+the region of interest around the current fit of the lane instead of
+having it fixed to the middle.
