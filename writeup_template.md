@@ -16,7 +16,7 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image0]: ./camera_cal/corners_found_1.jpg.png "Chessboard"
+[image0]: ./camera_cal/corners_found_1.jpg "Chessboard"
 [image1]: ./camera_cal/test_undist_comparison.png "Undistorted"
 [image2]: ./distortion/test_images/test4.jpg.png "Road Transformed"
 [image3]: ./threshold/test_images/test1.jpg.png "Binary Example"
